@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PlateScope — Vehicle Intelligence System</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --card: #111820;
+    --border: #1e2d3d;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --warn: #ff6b35;
+    --text: #c9d1d9;
+    --muted: #4a5568;
+    --success: #00ff88;
+    --danger: #ff4757;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Glow orbs ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 400px; height: 400px; top: -100px; left: -100px; background: rgba(0,212,255,0.08); }
+  .orb-2 { width: 300px; height: 300px; bottom: -80px; right: -80px; background: rgba(0,255,136,0.06); }
+
+  /* ── Header ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,16,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+  .logo span { color: var(--accent); }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* ── Section header ── */
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 60px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--card);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+  }
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,255,0.03), transparent);
+    pointer-events: none;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    filter: grayscale(1) brightness(0.6);
+    transition: filter 0.25s;
+  }
+  .upload-zone:hover .upload-icon { filter: none; }
+
+  .upload-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .upload-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  #file-input { display: none; }
+
+  /* ── Preview ── */
+  #preview-wrap {
+    display: none;
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  #preview-wrap img {
+    width: 100%;
+    max-height: 340px;
+    object-fit: contain;
+    display: block;
+  }
+  .preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 14px 36px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #080c10;
+  }
+  .btn-primary:hover { background: #33ddff; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-sm {
+    padding: 8px 18px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Actions row ── */
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    align-items: center;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(8,12,16,0.3);
+    border-top-color: #080c10;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Status bar ── */
+  #status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+  }
+  .dot.active { background: var(--accent); animation: pulse 1.2s ease infinite; }
+  .dot.ok { background: var(--success); }
+  .dot.err { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Results ── */
+  #results { margin-top: 40px; display: none; }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: slideIn 0.4s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+  }
+  .plate-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(0,212,255,0.1);
+    padding: 6px 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,212,255,0.3);
+    letter-spacing: 3px;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .tag-found { background: rgba(0,255,136,0.12); color: var(--success); border: 1px solid rgba(0,255,136,0.3); }
+  .tag-notfound { background: rgba(255,71,87,0.12); color: var(--danger); border: 1px solid rgba(255,71,87,0.3); }
+
+  .result-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .result-col {
+    padding: 20px;
+  }
+  .result-col:first-child { border-right: 1px solid var(--border); }
+
+  .field {
+    margin-bottom: 14px;
+  }
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+  .field-value {
+    font-size: 15px;
+    font-weight: 500;
+    color: #e6edf3;
+  }
+
+  .no-detections {
+    text-align: center;
+    padding: 48px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ── DB Table ── */
+  #db-section { margin-top: 48px; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead {
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+  td {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(30,45,61,0.6);
+    color: var(--text);
+    font-size: 13px;
+  }
+  tr:hover td { background: rgba(0,212,255,0.03); }
+  .mono { font-family: 'JetBrains Mono', monospace; color: #e6edf3; }
+
+  /* ── Manual lookup ── */
+  .search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .inp {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .inp::placeholder { color: var(--muted); letter-spacing: 1px; text-transform: none; }
+  .inp:focus { border-color: var(--accent); }
+
+  #manual-result {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 16px;
+    border-radius: 6px;
+    display: none;
+  }
+  #manual-result.ok { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); color: var(--success); }
+  #manual-result.err { background: rgba(255,71,87,0.08); border: 1px solid rgba(255,71,87,0.2); color: var(--danger); }
+
+  @media (max-width: 640px) {
+    header { padding: 16px 20px; }
+    main { padding: 24px 16px; }
+    .result-body { grid-template-columns: 1fr; }
+    .result-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<header>
+  <div class="logo">Plate<span>Scope</span></div>
+  <div class="badge">v1.0 · Live</div>
+</header>
+
+<main>
+  <!-- Upload Section -->
+  <p class="section-title">Detection Engine</p>
+
+  <div class="upload-zone" id="drop-zone">
+    <span class="upload-icon">🔍</span>
+    <div class="upload-title">Drop a vehicle image here</div>
+    <div class="upload-sub">or click to browse — JPG, PNG, WEBP supported</div>
+    <input type="file" id="file-input" accept="image/*" />
+  </div>
+
+  <div id="preview-wrap">
+    <img id="preview-img" src="" alt="Preview" />
+    <div class="preview-bar">
+      <span id="file-name">—</span>
+      <span id="file-size">—</span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="detect-btn" disabled>
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-label">⚡ Detect Plates</span>
+    </button>
+    <button class="btn btn-sm btn-outline" id="clear-btn">Clear</button>
+    <div id="status"><span class="dot" id="status-dot"></span><span id="status-text">Awaiting image</span></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <p class="section-title" style="margin-top:40px">Detection Results</p>
+    <div id="results-inner"></div>
+  </div>
+
+  <!-- Manual Lookup -->
+  <div id="db-section">
+    <p class="section-title" style="margin-top:48px">Manual Registration Lookup</p>
+    <div class="search-row">
+      <input class="inp" id="reg-inp" type="text" placeholder="Enter reg. number e.g. KL07AB1234" maxlength="15" />
+      <button class="btn btn-sm btn-primary" id="lookup-btn">Search</button>
+    </div>
+    <div id="manual-result"></div>
+
+    <!-- DB Table -->
+    <p class="section-title" style="margin-top:32px">Vehicle Database</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Reg. Number</th>
+            <th>Owner</th>
+            <th>House</th>
+            <th>Place</th>
+            <th>Phone</th>
+          </tr>
+        </thead>
+        <tbody id="db-body">
+          <tr><td colspan="5" style="color:var(--muted);font-family:monospace;text-align:center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('file-input');
+const previewWrap= document.getElementById('preview-wrap');
+const previewImg = document.getElementById('preview-img');
+const fileNameEl = document.getElementById('file-name');
+const fileSizeEl = document.getElementById('file-size');
+const detectBtn  = document.getElementById('detect-btn');
+const clearBtn   = document.getElementById('clear-btn');
+const spinner    = document.getElementById('spinner');
+const btnLabel   = document.getElementById('btn-label');
+const statusDot  = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const resultsDiv = document.getElementById('results');
+const resultsInner=document.getElementById('results-inner');
+const regInp     = document.getElementById('reg-inp');
+const lookupBtn  = document.getElementById('lookup-btn');
+const manualRes  = document.getElementById('manual-result');
+const dbBody     = document.getElementById('db-body');
+
+let selectedFile = null;
+
+function setStatus(msg, state='idle') {
+  statusText.textContent = msg;
+  statusDot.className = 'dot' + (state==='active' ? ' active' : state==='ok' ? ' ok' : state==='err' ? ' err' : '');
+}
+
+function loadFile(file) {
+  selectedFile = file;
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  fileNameEl.textContent = file.name;
+  fileSizeEl.textContent = (file.size/1024).toFixed(1) + ' KB';
+  previewWrap.style.display = 'block';
+  detectBtn.disabled = false;
+  resultsDiv.style.display = 'none';
+  setStatus('Image loaded — ready to scan', 'ok');
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+clearBtn.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  previewWrap.style.display = 'none';
+  detectBtn.disabled = true;
+  resultsDiv.style.display = 'none';
+  setStatus('Awaiting image');
+});
+
+detectBtn.addEventListener('click', async () => {
+  if(!selectedFile) return;
+  spinner.style.display = 'block';
+  btnLabel.textContent = 'Scanning…';
+  detectBtn.disabled = true;
+  setStatus('Running YOLO detection…', 'active');
+
+  const fd = new FormData();
+  // Read file as raw ArrayBuffer to prevent browser re-encoding
+  const arrayBuffer = await selectedFile.arrayBuffer();
+  const blob = new Blob([arrayBuffer], { type: selectedFile.type });
+  fd.append('file', blob, selectedFile.name);
+
+  try {
+    const res = await fetch('/detect', { method:'POST', body: fd });
+    const data = await res.json();
+
+    if(!res.ok) throw new Error(data.detail || 'Server error');
+
+    setStatus(`Done — ${data.count} plate(s) detected`, 'ok');
+    renderResults(data);
+  } catch(err) {
+    setStatus('Error: ' + err.message, 'err');
+    resultsInner.innerHTML = `<div class="no-detections">⚠ ${err.message}</div>`;
+    resultsDiv.style.display = 'block';
+  } finally {
+    spinner.style.display = 'none';
+    btnLabel.textContent = '⚡ Detect Plates';
+    detectBtn.disabled = false;
+  }
+});
+
+function renderResults(data) {
+  resultsDiv.style.display = 'block';
+  if(data.count === 0) {
+    resultsInner.innerHTML = '<div class="no-detections">No licence plates detected in this image.</div>';
+    return;
+  }
+  resultsInner.innerHTML = data.detections.map((d, i) => `
+    <div class="result-card">
+      <div class="result-header">
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">PLATE ${i+1}</span>
+          <span class="plate-text">${d.plate_text || '—'}</span>
+        </div>
+        <span class="tag ${d.found ? 'tag-found' : 'tag-notfound'}">${d.found ? '✓ FOUND' : '✗ NOT FOUND'}</span>
+      </div>
+      <div class="result-body">
+        <div class="result-col">
+          <div class="field">
+            <div class="field-label">Raw OCR Output</div>
+            <div class="field-value" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted)">${d.raw_ocr || '—'}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Bounding Box</div>
+            <div class="field-value" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">[${d.bbox.join(', ')}]</div>
+          </div>
+        </div>
+        <div class="result-col">
+          ${d.found ? `
+          <div class="field"><div class="field-label">Owner Name</div><div class="field-value">${d.owner.owner_name}</div></div>
+          <div class="field"><div class="field-label">House</div><div class="field-value">${d.owner.house_name}</div></div>
+          <div class="field"><div class="field-label">Place</div><div class="field-value">${d.owner.place}</div></div>
+          <div class="field"><div class="field-label">Phone</div><div class="field-value" style="font-family:'JetBrains Mono',monospace">${d.owner.phone}</div></div>
+          ` : `<div style="color:var(--muted);font-size:13px;padding-top:8px;font-family:'JetBrains Mono',monospace">No matching record found<br/>in the vehicle database.</div>`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Manual lookup ──
+lookupBtn.addEventListener('click', async () => {
+  const reg = regInp.value.trim().toUpperCase();
+  if(!reg) return;
+  try {
+    const res = await fetch(`/vehicles/${reg}`);
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Not found');
+    manualRes.className = 'ok';
+    manualRes.style.display = 'block';
+    manualRes.innerHTML = `
+      ✓ FOUND &nbsp;|&nbsp; ${data.owner_name} &nbsp;·&nbsp; ${data.house_name}, ${data.place} &nbsp;·&nbsp; ${data.phone}
+    `;
+  } catch(e) {
+    manualRes.className = 'err';
+    manualRes.style.display = 'block';
+    manualRes.textContent = '✗ ' + e.message;
+  }
+});
+regInp.addEventListener('keydown', e => { if(e.key==='Enter') lookupBtn.click(); });
+
+// ── Load DB table ──
+async function loadTable() {
+  try {
+    const res = await fetch('/vehicles');
+    const rows = await res.json();
+    dbBody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="mono">${r.reg_number}</td>
+        <td>${r.owner_name}</td>
+        <td>${r.house_name}</td>
+        <td>${r.place}</td>
+        <td class="mono">${r.phone}</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    dbBody.innerHTML = '<tr><td colspan="5" style="color:var(--danger)">Failed to load database.</td></tr>';
+  }
+}
+loadTable();
+</script>
+</body>
+</html>
